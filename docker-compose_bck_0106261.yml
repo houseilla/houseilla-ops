@@ -1,0 +1,48 @@
+services:
+  # =========================================================================
+  # 1. FRONTEND: Ionic Client Application
+  # =========================================================================
+  houseilla-frontend:
+    build:
+      context: ./houseilla-frontend  # Clean path starting from parent folder
+      dockerfile: Dockerfile
+    container_name: houseilla-frontend
+    ports:
+      - "8100:8100"
+    depends_on:
+      - houseilla-backend
+
+  # =========================================================================
+  # 2. BACKEND: Spring Boot Service (Using H2)
+  # =========================================================================
+  houseilla-backend:
+    build:
+      context: ./houseilla-backend   # Clean path starting from parent folder
+      dockerfile: Dockerfile
+    container_name: houseilla-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    volumes:
+      # Keeps your H2 database files securely inside your backend workspace
+      - ./houseilla-backend/workspace/data:/workspace/data
+
+  # =========================================================================
+  # 3. DATABASE: Isolated PostgreSQL Engine
+  # =========================================================================
+  houseilla-db:
+    image: postgres:16-alpine
+    container_name: houseilla-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: houseilladb
+      POSTGRES_USER: produser
+      POSTGRES_PASSWORD: prodpassword
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-prod-data:
+    name: houseilla-postgres-storage

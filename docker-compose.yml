@@ -1,0 +1,75 @@
+services:
+  # 1. Production PostgreSQL Database Cluster
+  houseilla-db:
+    image: postgres:16-alpine
+    container_name: houseilla-db
+    ports:
+      # Secure: Only allows internal connections from the host/containers
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: houseilladb
+      POSTGRES_USER: produser
+      # Note: In actual production environments, pass this via an external secret (.env file)
+      POSTGRES_PASSWORD: prodpassword
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+    restart: always # Automatically restarts the database engine if it crashes
+    deploy:
+      resources:
+        limits:
+          memory: 1G # Hard ceiling for Postgress to prevent RAM spikes
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U produser -d houseilladb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Production Ready Java Application
+  houseilla-backend:
+    build:
+      context: ./houseilla-backend
+      dockerfile: Dockerfile
+    container_name: houseilla-backend
+    ports:
+      - "127.0.0.1:8080:8080" #Secure: Hides API from public internet, routes through frontend Nginx if needed
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod # Activates your PostgreSQL application properties
+      - DB_HOST=houseilla-db
+      - DB_PORT=5432
+      - DB_NAME=houseilladb
+      - DB_USER=produser
+      - DB_PASS=prodpassword
+      - JAVA_OPTS=-XX:MaxRAMPercentage=75.0 # Fources Java JVM to respect Docker memory limits
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G  # Adequate memory limit for your Java application
+    depends_on:
+      houseilla-db:
+        condition: service_healthy
+
+  # 3. High Performance Frontend Nginx Router
+  houseilla-frontend:
+    build:
+      context: ./houseilla-frontend
+      dockerfile: Dockerfile
+    container_name: houseilla-frontend
+    ports:
+      - "80:80" # For production : public traffic goes directly to Nginx
+      #- "443:443" # Opens the network gateway for secure HTTPS connections
+      #- "8100:80" # Maps traffic from port 8100 on your Mac to internal port 80 (Nginx)
+    volumes:
+      # This line safely injects the local config without rebuilding the image
+      - ./houseilla-frontend/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro 
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256M #Nginx is incredibly light and does not need much RAM
+    depends_on:
+      - houseilla-backend
+
+volumes:
+  postgres-prod-data:
+    name: houseilla-postgres-storage

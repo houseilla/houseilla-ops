@@ -1,0 +1,19 @@
+
+# Ignore the workspace data
+.idea/
+
+# Ignore local database storage
+**/workspace/data/
+
+# Ignore system files
+.DS_Store
+
+# Ignore local H2 database binaries anywhere in the project hierarchy
+**/*.mv.db
+**/*.trace.db
+
+houseillaSSH
+houseillaSSH.pub
+
+# Ignore any subfolder like houseilla-backend, houseilla-frontend etc
+houseilla-*/

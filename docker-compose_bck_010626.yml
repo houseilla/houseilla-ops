@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./houseilla-backend
+      dockerfile: Dockerfile
+    container_name: houseilla-api
+    ports:
+      - "8080:8080"
+    volumes:
+      - h2-data:/workspace/data
+    networks:
+      - houseilla-network
+
+  frontend:
+    build:
+      context: ./houseilla-frontend
+      dockerfile: Dockerfile
+    container_name: houseilla-web
+    ports:
+      - "8100:80"
+    depends_on:
+      - backend
+    networks:
+      - houseilla-network
+
+# Add this at the absolute bottom of your file
+volumes:
+  h2-data:
+
+networks:
+  houseilla-network:
+
